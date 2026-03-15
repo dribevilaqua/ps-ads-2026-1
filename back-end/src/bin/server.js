@@ -12,7 +12,7 @@ import { createServer } from 'http'
  * Get port from environment and store in Express.
  */
 
-const port = normalizePort(process.env.PORT || '8888cd back-end')
+const port = normalizePort(process.env.PORT || '8888')
 app.set('port', port)
 
 /**
