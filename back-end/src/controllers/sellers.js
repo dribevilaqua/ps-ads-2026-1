@@ -1,13 +1,5 @@
 import { prisma } from '../database/client.js'
-import argon2 from 'argon2';
 
-
-const ARGON2_CONFIG = {
- type: argon2.argon2id,  // variante recomendada do algoritmo
- memoryCost: 65536,      // 64 KB de memória máxima utilizada
- timeCost: 3,            // número de iterações
- parallelism: 4          // número de threads simultâneas
-}
 
 const controller = {}   // Objeto vazio
 
@@ -18,17 +10,17 @@ const controller = {}   // Objeto vazio
 // res ~> representa a resposta (response)
 controller.create = async function(req, res) {
  try {
-   // Caso exista o campo "password" em req.body, é
-   // necessário gerar o hash da senha antes de
-   // armazená-la no BD, usando o algoritmo argon2
-   if(req.body.password) {
-     req.body.password = await argon2.hash(req.body.password, ARGON2_CONFIG)
+   if(req.body.birth_date) {
+     req.body.birth_date = new Date(req.body.birth_date)
+     if(Number.isNaN(req.body.birth_date.getTime())) {
+       return res.status(400).send({ error: 'birth_date inválida' })
+     }
    }
 
    // Para a inserção no BD, os dados são enviados
    // dentro de um objeto chamado "body" que vem
    // dentro da requisição ("req")
-   await prisma.user.create({ data: req.body })
+   await prisma.seller.create({ data: req.body })
 
 
    // Se tudo der certo, enviamos o código HTTP
@@ -50,16 +42,12 @@ controller.create = async function(req, res) {
 
 controller.retrieveAll = async function(req, res) {
  try {
-   const result = await prisma.user.findMany({
-     orderBy: [{ fullname: 'asc' }],
-     select: {
-       id: true,
-       fullname: true,
-       username: true,
-       email: true,
-       is_admin: true
-     }
+   // Recupera todos os registros de vendedores, ordenados pelo
+   // campo "fullname", ascendente
+   const result = await prisma.seller.findMany({
+     orderBy: [ { fullname: 'asc' }]
    })
+
 
    // HTTP 200: OK (implícito)
    res.send(result)
@@ -80,7 +68,7 @@ controller.retrieveOne = async function(req, res) {
  try {
    // Busca no banco de dados apenas o registro indicado
    // pelo parâmetro "id"
-   const result = await prisma.user.findUnique({
+   const result = await prisma.seller.findUnique({
      where: { id: Number(req.params.id) }
    })
 
@@ -104,17 +92,17 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
  try {
-    // Caso exista o campo "password" em req.body, é
-   // necessário gerar o hash da senha antes de
-   // armazená-la no BD, usando o algoritmo argon2
-   if(req.body.password) {
-     req.body.password = await argon2.hash(req.body.password, ARGON2_CONFIG)
+   if(req.body.birth_date) {
+     req.body.birth_date = new Date(req.body.birth_date)
+     if(Number.isNaN(req.body.birth_date.getTime())) {
+       return res.status(400).send({ error: 'birth_date inválida' })
+     }
    }
 
    // Busca o registro no banco de dados por seu id
    // e o atualiza com as informações que vieram em
    // req.body
-   await prisma.user.update({
+   await prisma.seller.update({
      where: { id: Number(req.params.id) },
      data: req.body
    })
@@ -145,7 +133,7 @@ controller.update = async function(req, res) {
 
 controller.delete = async function(req, res) {
  try {
-   await prisma.user.delete({
+   await prisma.seller.delete({
      where: { id: Number(req.params.id) }
    })
 
@@ -171,36 +159,6 @@ controller.delete = async function(req, res) {
    // HTTP 500: Internal Server Error
    else res.status(500).end()
  } 
-}
-
-controller.login = async function(req, res) {
- try {
-   // Busca o usuário no BD por meio dos campos
-   // "username" ou "email"
-   const user = await prisma.user.findUnique({
-     where: {
-       OR: [
-         { username: req.body?.username },
-         { email: req.body?.email }
-       ]
-     }
-   })
-
-
-   // Se o usuário não for encontrado, retorna
-   // HTTP 401: Unauthorized
-   if(! user) {
-     console.error(`ERRO DE LOGIN: usuário "${req.body?.username}" ou e-mail "${req.body?.email}" não encontrado`)
-     return res.send(401).end()
-   }
-
-
- }
- catch(error) {
-   console.error(error)
-   // HTTP 500: Internal Server Error
-   res.status(500).end()
- }
 }
 
 export default controller
